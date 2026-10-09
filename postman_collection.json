@@ -1,0 +1,201 @@
+{
+  "info": {
+    "name": "App Ticketing Nequi API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Create Event (ADMIN)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Role",
+            "value": "ADMIN"
+          },
+          {
+            "key": "X-Trace-Id",
+            "value": "trace-create-event-001"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Concierto Rock 2026\",\n  \"eventDate\": \"2026-12-20T20:00:00Z\",\n  \"venue\": \"Estadio El Campín\",\n  \"category\": \"CONCERT\",\n  \"totalCapacity\": 5000,\n  \"ticketPrice\": 150000.00\n}"
+        },
+        "url": "http://localhost:8080/api/v1/events"
+      }
+    },
+    {
+      "name": "2. Get Events Paginated",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Trace-Id",
+            "value": "trace-get-events"
+          }
+        ],
+        "url": "http://localhost:8080/api/v1/events?limit=10"
+      }
+    },
+    {
+      "name": "3. Get Event Detail + Realtime Availability",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Trace-Id",
+            "value": "trace-get-detail"
+          }
+        ],
+        "url": "http://localhost:8080/api/v1/events/{{eventId}}"
+      }
+    },
+    {
+      "name": "4. Create Purchase Order",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "idemp-order-key-12345"
+          },
+          {
+            "key": "X-User-Id",
+            "value": "usr-client-001"
+          },
+          {
+            "key": "X-Trace-Id",
+            "value": "trace-create-order"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"eventId\": \"{{eventId}}\",\n  \"quantity\": 2\n}"
+        },
+        "url": "http://localhost:8080/api/v1/orders"
+      }
+    },
+    {
+      "name": "5. Query Order Status",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-User-Id",
+            "value": "usr-client-001"
+          },
+          {
+            "key": "X-Trace-Id",
+            "value": "trace-query-order"
+          }
+        ],
+        "url": "http://localhost:8080/api/v1/orders/{{orderId}}"
+      }
+    },
+    {
+      "name": "6. Confirm Order",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-User-Id",
+            "value": "usr-client-001"
+          },
+          {
+            "key": "X-Trace-Id",
+            "value": "trace-confirm-order"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"paymentReference\": \"tok_card_visa_123\"\n}"
+        },
+        "url": "http://localhost:8080/api/v1/orders/{{orderId}}/confirm"
+      }
+    },
+    {
+      "name": "7. Cancel Order",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-User-Id",
+            "value": "usr-client-001"
+          },
+          {
+            "key": "X-Trace-Id",
+            "value": "trace-cancel-order"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reason\": \"CUSTOMER_REQUEST\"\n}"
+        },
+        "url": "http://localhost:8080/api/v1/orders/{{orderId}}/cancel"
+      }
+    },
+    {
+      "name": "8. Query Order Audit History",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-User-Id",
+            "value": "usr-client-001"
+          },
+          {
+            "key": "X-Trace-Id",
+            "value": "trace-history"
+          }
+        ],
+        "url": "http://localhost:8080/api/v1/orders/{{orderId}}/history"
+      }
+    },
+    {
+      "name": "9. Issue Complimentary Tickets (ADMIN)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Role",
+            "value": "ADMIN"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "idemp-complimentary-001"
+          },
+          {
+            "key": "X-Trace-Id",
+            "value": "trace-complimentary"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"quantity\": 5,\n  \"recipient\": \"Prensa VIP\",\n  \"reason\": \"Promoción Medios\"\n}"
+        },
+        "url": "http://localhost:8080/api/v1/events/{{eventId}}/complimentary"
+      }
+    }
+  ]
+}
