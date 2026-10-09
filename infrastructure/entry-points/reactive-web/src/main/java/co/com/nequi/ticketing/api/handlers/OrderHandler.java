@@ -9,13 +9,19 @@ import co.com.nequi.ticketing.api.helper.ResponseHelper;
 import co.com.nequi.ticketing.api.helper.ValidationHelper;
 import co.com.nequi.ticketing.api.mapper.OrderHistoryDTOMapper;
 import co.com.nequi.ticketing.api.mapper.PurchaseOrderDTOMapper;
-import co.com.nequi.ticketing.model.GeneralMessage;
+import co.com.nequi.ticketing.api.util.Constants;
+import co.com.nequi.ticketing.model.enums.GeneralMessage;
+import co.com.nequi.ticketing.model.exception.BusinessException;
+import co.com.nequi.ticketing.model.exception.TechnicalException;
 import co.com.nequi.ticketing.usecase.CancelOrderUseCase;
 import co.com.nequi.ticketing.usecase.ConfirmOrderUseCase;
 import co.com.nequi.ticketing.usecase.CreateOrderUseCase;
 import co.com.nequi.ticketing.usecase.GetOrderHistoryUseCase;
 import co.com.nequi.ticketing.usecase.GetOrderUseCase;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
@@ -25,6 +31,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 
+import static co.com.nequi.ticketing.api.util.Constants.CB_FALLBACK;
+
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class OrderHandler {
@@ -37,45 +46,42 @@ public class OrderHandler {
     private final PurchaseOrderDTOMapper purchaseOrderDTOMapper;
     private final OrderHistoryDTOMapper orderHistoryDTOMapper;
     private final ValidationHelper validationHelper;
-    private final ResponseHelper responseHelper;
     private final LogAppenderHelper logAppender;
 
+    @CircuitBreaker(name = Constants.CB_CREATE_ORDER, fallbackMethod = CB_FALLBACK)
     public Mono<ServerResponse> createOrder(ServerRequest request) {
         long startTime = System.currentTimeMillis();
         String endpoint = "POST /api/v1/orders";
-        String idempotencyKey = request.headers().firstHeader("Idempotency-Key");
-        String userId = request.attribute(TraceAndSecurityFilter.USER_ID_HEADER).orElse("usr-default").toString();
+        String idempotencyKey = request.headers().firstHeader(Constants.IDEMPOTENCY_KEY_HEADER);
+        String userId = request.attribute(TraceAndSecurityFilter.USER_ID_HEADER).orElse(Constants.DEFAULT_USER_ID).toString();
         String traceId = request.attribute(TraceAndSecurityFilter.TRACE_ID_HEADER).orElse("").toString();
 
-        if (idempotencyKey == null || idempotencyKey.isBlank()) {
-            return responseHelper.buildErrorResponse(GeneralMessage.VAL_IDEMPOTENCY_KEY_REQUIRED);
-        }
-
-        return request.bodyToMono(PurchaseOrderRequestDTO.class)
+        return Mono.justOrEmpty(idempotencyKey)
+                .filter(k -> !k.isBlank())
+                .switchIfEmpty(Mono.error(() -> new BusinessException(GeneralMessage.VAL_IDEMPOTENCY_KEY_REQUIRED)))
+                .flatMap(key -> request.bodyToMono(PurchaseOrderRequestDTO.class))
                 .doOnNext(dto -> logAppender.logRequest(endpoint, dto))
                 .flatMap(validationHelper::validate)
-                .flatMap(dto -> {
-                    String hash = hashBody(dto);
-                    return createOrderUseCase.execute(dto.getEventId(), userId, dto.getQuantity(), idempotencyKey, hash, traceId);
-                })
+                .flatMap(dto -> createOrderUseCase.execute(dto.getEventId(), userId, dto.getQuantity(), idempotencyKey, hashBody(dto), traceId))
                 .map(purchaseOrderDTOMapper::toResponseDTO)
                 .flatMap(response -> {
                     logAppender.logResponse(endpoint, response, System.currentTimeMillis() - startTime);
-                    return responseHelper.buildResponse(GeneralMessage.CREATED, response);
+                    return ResponseHelper.buildResponse(GeneralMessage.CREATED, response);
                 })
                 .onErrorResume(error -> {
                     logAppender.logError(endpoint, error);
-                    return responseHelper.buildErrorResponse(error);
+                    return ResponseHelper.buildErrorResponse(error);
                 });
     }
 
+    @CircuitBreaker(name = Constants.CB_GET_ORDER, fallbackMethod = CB_FALLBACK)
     public Mono<ServerResponse> getOrderById(ServerRequest request) {
         long startTime = System.currentTimeMillis();
         String orderId = request.pathVariable("orderId");
         String endpoint = "GET /api/v1/orders/" + orderId;
-        String userId = request.attribute(TraceAndSecurityFilter.USER_ID_HEADER).orElse("usr-default").toString();
-        String role = request.attribute(TraceAndSecurityFilter.ROLE_HEADER).orElse("USER").toString();
-        boolean isAdmin = "ADMIN".equalsIgnoreCase(role);
+        String userId = request.attribute(TraceAndSecurityFilter.USER_ID_HEADER).orElse(Constants.DEFAULT_USER_ID).toString();
+        boolean isAdmin = Constants.ROLE_ADMIN.equalsIgnoreCase(
+                request.attribute(TraceAndSecurityFilter.ROLE_HEADER).orElse(Constants.DEFAULT_ROLE).toString());
 
         logAppender.logRequest(endpoint, orderId);
 
@@ -83,22 +89,23 @@ public class OrderHandler {
                 .map(purchaseOrderDTOMapper::toResponseDTO)
                 .flatMap(response -> {
                     logAppender.logResponse(endpoint, response, System.currentTimeMillis() - startTime);
-                    return responseHelper.buildResponse(GeneralMessage.SUCCESS, response);
+                    return ResponseHelper.buildResponse(GeneralMessage.SUCCESS, response);
                 })
                 .onErrorResume(error -> {
                     logAppender.logError(endpoint, error);
-                    return responseHelper.buildErrorResponse(error);
+                    return ResponseHelper.buildErrorResponse(error);
                 });
     }
 
+    @CircuitBreaker(name = Constants.CB_CONFIRM_ORDER, fallbackMethod = CB_FALLBACK)
     public Mono<ServerResponse> confirmOrder(ServerRequest request) {
         long startTime = System.currentTimeMillis();
         String orderId = request.pathVariable("orderId");
         String endpoint = "POST /api/v1/orders/" + orderId + "/confirm";
-        String userId = request.attribute(TraceAndSecurityFilter.USER_ID_HEADER).orElse("usr-default").toString();
-        String role = request.attribute(TraceAndSecurityFilter.ROLE_HEADER).orElse("USER").toString();
+        String userId = request.attribute(TraceAndSecurityFilter.USER_ID_HEADER).orElse(Constants.DEFAULT_USER_ID).toString();
         String traceId = request.attribute(TraceAndSecurityFilter.TRACE_ID_HEADER).orElse("").toString();
-        boolean isAdmin = "ADMIN".equalsIgnoreCase(role);
+        boolean isAdmin = Constants.ROLE_ADMIN.equalsIgnoreCase(
+                request.attribute(TraceAndSecurityFilter.ROLE_HEADER).orElse(Constants.DEFAULT_ROLE).toString());
 
         return request.bodyToMono(ConfirmOrderRequestDTO.class)
                 .defaultIfEmpty(new ConfirmOrderRequestDTO())
@@ -107,22 +114,23 @@ public class OrderHandler {
                 .map(purchaseOrderDTOMapper::toResponseDTO)
                 .flatMap(response -> {
                     logAppender.logResponse(endpoint, response, System.currentTimeMillis() - startTime);
-                    return responseHelper.buildResponse(GeneralMessage.ACCEPTED, response);
+                    return ResponseHelper.buildResponse(GeneralMessage.ACCEPTED, response);
                 })
                 .onErrorResume(error -> {
                     logAppender.logError(endpoint, error);
-                    return responseHelper.buildErrorResponse(error);
+                    return ResponseHelper.buildErrorResponse(error);
                 });
     }
 
+    @CircuitBreaker(name = Constants.CB_CANCEL_ORDER, fallbackMethod = CB_FALLBACK)
     public Mono<ServerResponse> cancelOrder(ServerRequest request) {
         long startTime = System.currentTimeMillis();
         String orderId = request.pathVariable("orderId");
         String endpoint = "POST /api/v1/orders/" + orderId + "/cancel";
-        String userId = request.attribute(TraceAndSecurityFilter.USER_ID_HEADER).orElse("usr-default").toString();
-        String role = request.attribute(TraceAndSecurityFilter.ROLE_HEADER).orElse("USER").toString();
+        String userId = request.attribute(TraceAndSecurityFilter.USER_ID_HEADER).orElse(Constants.DEFAULT_USER_ID).toString();
         String traceId = request.attribute(TraceAndSecurityFilter.TRACE_ID_HEADER).orElse("").toString();
-        boolean isAdmin = "ADMIN".equalsIgnoreCase(role);
+        boolean isAdmin = Constants.ROLE_ADMIN.equalsIgnoreCase(
+                request.attribute(TraceAndSecurityFilter.ROLE_HEADER).orElse(Constants.DEFAULT_ROLE).toString());
 
         return request.bodyToMono(CancelOrderRequestDTO.class)
                 .defaultIfEmpty(new CancelOrderRequestDTO())
@@ -131,21 +139,22 @@ public class OrderHandler {
                 .map(purchaseOrderDTOMapper::toResponseDTO)
                 .flatMap(response -> {
                     logAppender.logResponse(endpoint, response, System.currentTimeMillis() - startTime);
-                    return responseHelper.buildResponse(GeneralMessage.SUCCESS, response);
+                    return ResponseHelper.buildResponse(GeneralMessage.SUCCESS, response);
                 })
                 .onErrorResume(error -> {
                     logAppender.logError(endpoint, error);
-                    return responseHelper.buildErrorResponse(error);
+                    return ResponseHelper.buildErrorResponse(error);
                 });
     }
 
+    @CircuitBreaker(name = Constants.CB_GET_ORDER_HISTORY, fallbackMethod = CB_FALLBACK)
     public Mono<ServerResponse> getOrderHistory(ServerRequest request) {
         long startTime = System.currentTimeMillis();
         String orderId = request.pathVariable("orderId");
         String endpoint = "GET /api/v1/orders/" + orderId + "/history";
-        String userId = request.attribute(TraceAndSecurityFilter.USER_ID_HEADER).orElse("usr-default").toString();
-        String role = request.attribute(TraceAndSecurityFilter.ROLE_HEADER).orElse("USER").toString();
-        boolean isAdmin = "ADMIN".equalsIgnoreCase(role);
+        String userId = request.attribute(TraceAndSecurityFilter.USER_ID_HEADER).orElse(Constants.DEFAULT_USER_ID).toString();
+        boolean isAdmin = Constants.ROLE_ADMIN.equalsIgnoreCase(
+                request.attribute(TraceAndSecurityFilter.ROLE_HEADER).orElse(Constants.DEFAULT_ROLE).toString());
 
         logAppender.logRequest(endpoint, orderId);
 
@@ -154,12 +163,30 @@ public class OrderHandler {
                 .collectList()
                 .flatMap(list -> {
                     logAppender.logResponse(endpoint, list, System.currentTimeMillis() - startTime);
-                    return responseHelper.buildResponse(GeneralMessage.SUCCESS, list);
+                    return ResponseHelper.buildResponse(GeneralMessage.SUCCESS, list);
                 })
                 .onErrorResume(error -> {
                     logAppender.logError(endpoint, error);
-                    return responseHelper.buildErrorResponse(error);
+                    return ResponseHelper.buildErrorResponse(error);
                 });
+    }
+
+    @SuppressWarnings("unused")
+    public Mono<ServerResponse> fallback(ServerRequest request, CallNotPermittedException ex) {
+        log.error("[CB_OPEN] Circuit breaker open for request: {}", request.path(), ex);
+        return ResponseHelper.buildErrorResponse(GeneralMessage.TECH_CIRCUIT_OPEN);
+    }
+
+    @SuppressWarnings("unused")
+    public Mono<ServerResponse> fallback(ServerRequest request, TechnicalException ex) {
+        log.error("[CB_FALLBACK] Technical exception for request: {}", request.path(), ex);
+        return ResponseHelper.buildErrorResponse(ex.getGeneralMessage());
+    }
+
+    @SuppressWarnings("unused")
+    public Mono<ServerResponse> fallback(ServerRequest request, Exception ex) {
+        log.error("[CB_FALLBACK] Unexpected exception for request: {}", request.path(), ex);
+        return ResponseHelper.buildErrorResponse(GeneralMessage.TECH_INTERNAL_ERROR);
     }
 
     private String hashBody(Object body) {
