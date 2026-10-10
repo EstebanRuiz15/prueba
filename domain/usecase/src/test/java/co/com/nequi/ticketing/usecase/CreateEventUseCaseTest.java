@@ -1,8 +1,9 @@
 package co.com.nequi.ticketing.usecase;
 
 import co.com.nequi.ticketing.model.Event;
-import co.com.nequi.ticketing.model.EventCategory;
+import co.com.nequi.ticketing.model.enums.EventCategory;
 import co.com.nequi.ticketing.model.Inventory;
+import co.com.nequi.ticketing.model.enums.GeneralMessage;
 import co.com.nequi.ticketing.model.exception.BusinessException;
 import co.com.nequi.ticketing.model.gateways.EventRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,8 +22,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class CreateEventUseCaseTest {
 
-    @Mock
-    private EventRepository eventRepository;
+    @Mock private EventRepository eventRepository;
 
     private CreateEventUseCase createEventUseCase;
 
@@ -51,14 +51,36 @@ class CreateEventUseCaseTest {
     }
 
     @Test
-    void shouldFailWhenCapacityIsInvalid() {
-        Event inputEvent = Event.builder()
-                .name("Invalid Event")
-                .totalCapacity(0)
-                .build();
+    void shouldFailWhenCapacityIsZero() {
+        Event inputEvent = Event.builder().name("Invalid Event").totalCapacity(0).build();
 
         StepVerifier.create(createEventUseCase.execute(inputEvent))
-                .expectError(BusinessException.class)
+                .expectErrorMatches(e -> e instanceof BusinessException be
+                        && be.getGeneralMessage() == GeneralMessage.VAL_INVALID_QUANTITY)
                 .verify();
+    }
+
+    @Test
+    void shouldFailWhenCapacityIsNull() {
+        Event inputEvent = Event.builder().name("Invalid Event").totalCapacity(null).build();
+
+        StepVerifier.create(createEventUseCase.execute(inputEvent))
+                .expectErrorMatches(e -> e instanceof BusinessException be
+                        && be.getGeneralMessage() == GeneralMessage.VAL_INVALID_QUANTITY)
+                .verify();
+    }
+
+    @Test
+    void shouldSetDefaultCurrencyWhenNotProvided() {
+        Event inputEvent = Event.builder()
+                .name("Concert").totalCapacity(50)
+                .ticketPrice(BigDecimal.valueOf(100.0)).build();
+
+        when(eventRepository.createWithInventory(any(Event.class), any(Inventory.class)))
+                .thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
+
+        StepVerifier.create(createEventUseCase.execute(inputEvent))
+                .expectNextMatches(saved -> "COP".equals(saved.getCurrency()))
+                .verifyComplete();
     }
 }

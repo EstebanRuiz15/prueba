@@ -9,9 +9,6 @@ public class MockPaymentGatewayAdapter implements PaymentGateway {
 
     @Override
     public Mono<Boolean> charge(String orderId, String paymentRef) {
-        if ("REJECT_PAYMENT".equals(paymentRef)) {
-            return Mono.just(false);
-        }
-        return Mono.just(true);
+        return Mono.just(!"REJECT_PAYMENT".equals(paymentRef));
     }
 }

@@ -1,6 +1,6 @@
 package co.com.nequi.ticketing.usecase;
 
-import co.com.nequi.ticketing.model.GeneralMessage;
+import co.com.nequi.ticketing.model.enums.GeneralMessage;
 import co.com.nequi.ticketing.model.TicketOrder;
 import co.com.nequi.ticketing.model.exception.BusinessException;
 import co.com.nequi.ticketing.model.gateways.TicketOrderRepository;

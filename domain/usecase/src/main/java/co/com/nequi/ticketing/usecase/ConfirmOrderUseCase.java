@@ -1,8 +1,9 @@
 package co.com.nequi.ticketing.usecase;
 
-import co.com.nequi.ticketing.model.GeneralMessage;
+import co.com.nequi.ticketing.usecase.utils.UseCaseConstants;
+import co.com.nequi.ticketing.model.enums.GeneralMessage;
 import co.com.nequi.ticketing.model.TicketOrder;
-import co.com.nequi.ticketing.model.TicketStatus;
+import co.com.nequi.ticketing.model.enums.TicketStatus;
 import co.com.nequi.ticketing.model.exception.BusinessException;
 import co.com.nequi.ticketing.model.gateways.QueueService;
 import co.com.nequi.ticketing.model.gateways.TicketOrderRepository;
@@ -14,8 +15,6 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class ConfirmOrderUseCase {
 
-    private static final long PENDING_TIMEOUT_SECONDS = 300L;
-
     private final TicketOrderRepository ticketOrderRepository;
     private final QueueService queueService;
 
@@ -24,24 +23,25 @@ public class ConfirmOrderUseCase {
                 .switchIfEmpty(Mono.error(new BusinessException(GeneralMessage.BUS_ORDER_NOT_FOUND)))
                 .filter(order -> isAdmin || order.getUserId().equals(userId))
                 .switchIfEmpty(Mono.error(new BusinessException(GeneralMessage.BUS_ORDER_NOT_FOUND)))
-                .flatMap(order -> {
-                    if (TicketStatus.PENDING_CONFIRMATION.equals(order.getStatus())) {
-                        return queueService.sendFinalizeOrderMessage(orderId, traceId).thenReturn(order);
-                    }
-                    if (TicketStatus.SOLD.equals(order.getStatus())) {
-                        return Mono.just(order);
-                    }
-                    if (!TicketStatus.RESERVED.equals(order.getStatus())) {
-                        return Mono.error(new BusinessException(GeneralMessage.BUS_INVALID_STATE_TRANSITION));
-                    }
-                    if (order.getDeadlineAt() != null && order.getDeadlineAt() <= Instant.now().getEpochSecond()) {
-                        return Mono.error(new BusinessException(GeneralMessage.BUS_ORDER_EXPIRED));
-                    }
+                .flatMap(order -> dispatchByStatus(order, orderId, paymentReference, traceId));
+    }
 
-                    return ticketOrderRepository.confirmOrderTransaction(order, paymentReference, traceId)
-                            .flatMap(confirmedOrder -> queueService.sendFinalizeOrderMessage(orderId, traceId)
-                                    .then(queueService.sendExpireOrderMessage(orderId, confirmedOrder.getDeadlineAt(), PENDING_TIMEOUT_SECONDS).onErrorResume(e -> Mono.empty()))
-                                    .thenReturn(confirmedOrder));
-                });
+    private Mono<TicketOrder> dispatchByStatus(TicketOrder order, String orderId, String paymentReference, String traceId) {
+        return switch (order.getStatus()) {
+            case PENDING_CONFIRMATION -> queueService.sendFinalizeOrderMessage(orderId, traceId).thenReturn(order);
+            case SOLD -> Mono.just(order);
+            case RESERVED -> confirmReserved(order, orderId, paymentReference, traceId);
+            case CANCELLED, EXPIRED, COMPLIMENTARY -> Mono.error(new BusinessException(GeneralMessage.BUS_INVALID_STATE_TRANSITION));
+        };
+    }
+
+    private Mono<TicketOrder> confirmReserved(TicketOrder order, String orderId, String paymentReference, String traceId) {
+        return Mono.just(order)
+                .filter(o -> o.getExpiresAt() == null || o.getExpiresAt().isAfter(Instant.now()))
+                .switchIfEmpty(Mono.error(new BusinessException(GeneralMessage.BUS_ORDER_EXPIRED)))
+                .flatMap(o -> ticketOrderRepository.confirmOrderTransaction(o, paymentReference, traceId))
+                .flatMap(confirmed -> queueService.sendFinalizeOrderMessage(orderId, traceId)
+                        .then(queueService.sendExpireOrderMessage(orderId, confirmed.getExpiresAt() != null ? confirmed.getExpiresAt().getEpochSecond() : 0L, UseCaseConstants.CONFIRM_TIMEOUT_SECONDS).onErrorResume(e -> Mono.empty()))
+                        .thenReturn(confirmed));
     }
 }

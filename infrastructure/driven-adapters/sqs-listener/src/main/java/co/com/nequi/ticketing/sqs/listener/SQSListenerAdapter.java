@@ -2,7 +2,6 @@ package co.com.nequi.ticketing.sqs.listener;
 
 import co.com.nequi.ticketing.usecase.ProcessOrderAsyncUseCase;
 import co.com.nequi.ticketing.usecase.ReleaseExpiredReservationsUseCase;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,12 +54,14 @@ public class SQSListenerAdapter {
                             String traceId = node.path("traceId").asText(null);
                             return processOrderAsyncUseCase.execute(orderId, traceId, msg.messageId());
                         })
-                        .then(Mono.fromFuture(() -> sqsAsyncClient.deleteMessage(DeleteMessageRequest.builder()
-                                .queueUrl(processingQueueUrl)
-                                .receiptHandle(msg.receiptHandle())
-                                .build())))
+                        .then(Mono.fromFuture(() -> sqsAsyncClient.deleteMessage(
+                                DeleteMessageRequest.builder()
+                                        .queueUrl(processingQueueUrl)
+                                        .receiptHandle(msg.receiptHandle())
+                                        .build())))
+                        .then()
                         .onErrorResume(e -> {
-                            log.error("Error processing SQS message {}", msg.messageId(), e);
+                            log.error("Error processing SQS message {}, will not delete for retry", msg.messageId(), e);
                             return Mono.empty();
                         }))
                 .subscribe();
@@ -82,12 +83,14 @@ public class SQSListenerAdapter {
                             long deadlineAt = node.path("deadlineAt").asLong(0);
                             return releaseExpiredReservationsUseCase.expireOrderById(orderId, deadlineAt, "SQS_EXPIRER");
                         })
-                        .then(Mono.fromFuture(() -> sqsAsyncClient.deleteMessage(DeleteMessageRequest.builder()
-                                .queueUrl(expirationQueueUrl)
-                                .receiptHandle(msg.receiptHandle())
-                                .build())))
+                        .then(Mono.fromFuture(() -> sqsAsyncClient.deleteMessage(
+                                DeleteMessageRequest.builder()
+                                        .queueUrl(expirationQueueUrl)
+                                        .receiptHandle(msg.receiptHandle())
+                                        .build())))
+                        .then()
                         .onErrorResume(e -> {
-                            log.error("Error processing expiration SQS message {}", msg.messageId(), e);
+                            log.error("Error processing expiration SQS message {}, will not delete for retry", msg.messageId(), e);
                             return Mono.empty();
                         }))
                 .subscribe();

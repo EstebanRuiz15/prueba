@@ -5,6 +5,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import co.com.nequi.ticketing.model.enums.OrderType;
+import co.com.nequi.ticketing.model.enums.ReleaseReason;
+import co.com.nequi.ticketing.model.enums.TicketStatus;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 
@@ -22,7 +26,6 @@ public class TicketOrder {
     private BigDecimal totalAmount;
     private String currency;
     private TicketStatus status;
-    private Long deadlineAt;
     private String expiryShard;
     private ReleaseReason releaseReason;
     private String failureCode;

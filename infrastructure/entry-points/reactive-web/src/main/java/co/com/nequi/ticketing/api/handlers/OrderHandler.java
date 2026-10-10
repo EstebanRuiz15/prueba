@@ -1,8 +1,8 @@
-package co.com.nequi.ticketing.api;
+package co.com.nequi.ticketing.api.handlers;
 
-import co.com.nequi.ticketing.api.dto.CancelOrderRequestDTO;
-import co.com.nequi.ticketing.api.dto.ConfirmOrderRequestDTO;
-import co.com.nequi.ticketing.api.dto.PurchaseOrderRequestDTO;
+import co.com.nequi.ticketing.api.dto.request.CancelOrderRequestDTO;
+import co.com.nequi.ticketing.api.dto.request.ConfirmOrderRequestDTO;
+import co.com.nequi.ticketing.api.dto.request.PurchaseOrderRequestDTO;
 import co.com.nequi.ticketing.api.filter.TraceAndSecurityFilter;
 import co.com.nequi.ticketing.api.helper.LogAppenderHelper;
 import co.com.nequi.ticketing.api.helper.ResponseHelper;

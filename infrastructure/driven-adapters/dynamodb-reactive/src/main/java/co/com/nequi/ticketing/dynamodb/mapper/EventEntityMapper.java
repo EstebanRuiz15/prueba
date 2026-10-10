@@ -2,7 +2,7 @@ package co.com.nequi.ticketing.dynamodb.mapper;
 
 import co.com.nequi.ticketing.dynamodb.entity.EventEntity;
 import co.com.nequi.ticketing.model.Event;
-import co.com.nequi.ticketing.model.EventCategory;
+import co.com.nequi.ticketing.model.enums.EventCategory;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

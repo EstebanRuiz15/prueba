@@ -1,9 +1,9 @@
 package co.com.nequi.ticketing.api.mapper;
 
-import co.com.nequi.ticketing.api.dto.OrderHistoryResponseDTO;
-import co.com.nequi.ticketing.model.ActorType;
+import co.com.nequi.ticketing.api.dto.responses.OrderHistoryResponseDTO;
+import co.com.nequi.ticketing.model.enums.ActorType;
 import co.com.nequi.ticketing.model.OrderHistory;
-import co.com.nequi.ticketing.model.TicketStatus;
+import co.com.nequi.ticketing.model.enums.TicketStatus;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

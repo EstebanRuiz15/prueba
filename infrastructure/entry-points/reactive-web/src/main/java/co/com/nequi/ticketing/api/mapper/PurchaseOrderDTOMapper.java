@@ -1,15 +1,17 @@
 package co.com.nequi.ticketing.api.mapper;
 
-import co.com.nequi.ticketing.api.dto.OrderFailureDTO;
-import co.com.nequi.ticketing.api.dto.PurchaseOrderResponseDTO;
-import co.com.nequi.ticketing.model.OrderType;
-import co.com.nequi.ticketing.model.ReleaseReason;
+import co.com.nequi.ticketing.api.dto.responses.OrderFailureDTO;
+import co.com.nequi.ticketing.api.dto.responses.PurchaseOrderResponseDTO;
+import co.com.nequi.ticketing.model.enums.OrderType;
+import co.com.nequi.ticketing.model.enums.ReleaseReason;
 import co.com.nequi.ticketing.model.TicketOrder;
-import co.com.nequi.ticketing.model.TicketStatus;
+import co.com.nequi.ticketing.model.enums.TicketStatus;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
 import java.time.Instant;
+import java.util.Optional;
+import java.util.Set;
 
 @Mapper(componentModel = "spring")
 public interface PurchaseOrderDTOMapper {
@@ -37,20 +39,15 @@ public interface PurchaseOrderDTOMapper {
     }
 
     default String mapExpiresAt(TicketOrder order) {
-        if (order.getStatus() == TicketStatus.RESERVED || order.getStatus() == TicketStatus.PENDING_CONFIRMATION) {
-            return order.getExpiresAt() != null ? order.getExpiresAt().toString() : (order.getDeadlineAt() != null ? Instant.ofEpochSecond(order.getDeadlineAt()).toString() : null);
-        }
-        return null;
+        return Set.of(TicketStatus.RESERVED, TicketStatus.PENDING_CONFIRMATION).contains(order.getStatus())
+                ? Optional.ofNullable(order.getExpiresAt()).map(Instant::toString).orElse(null)
+                : null;
     }
 
     default OrderFailureDTO mapFailure(TicketOrder order) {
-        if (order.getFailureCode() != null) {
-            return OrderFailureDTO.builder()
-                    .code(order.getFailureCode())
-                    .description(order.getFailureDescription())
-                    .build();
-        }
-        return null;
+        return order.getFailureCode() != null
+                ? OrderFailureDTO.builder().code(order.getFailureCode()).description(order.getFailureDescription()).build()
+                : null;
     }
 
     default String mapInstant(Instant instant) {

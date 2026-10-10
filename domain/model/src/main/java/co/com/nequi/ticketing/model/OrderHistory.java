@@ -5,6 +5,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import co.com.nequi.ticketing.model.enums.ActorType;
+import co.com.nequi.ticketing.model.enums.TicketStatus;
+
 import java.time.Instant;
 
 @Data

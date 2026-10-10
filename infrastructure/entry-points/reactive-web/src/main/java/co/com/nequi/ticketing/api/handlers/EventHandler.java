@@ -1,7 +1,7 @@
-package co.com.nequi.ticketing.api;
+package co.com.nequi.ticketing.api.handlers;
 
-import co.com.nequi.ticketing.api.dto.ComplimentaryRequestDTO;
-import co.com.nequi.ticketing.api.dto.EventRequestDTO;
+import co.com.nequi.ticketing.api.dto.request.ComplimentaryRequestDTO;
+import co.com.nequi.ticketing.api.dto.request.EventRequestDTO;
 import co.com.nequi.ticketing.api.filter.TraceAndSecurityFilter;
 import co.com.nequi.ticketing.api.helper.LogAppenderHelper;
 import co.com.nequi.ticketing.api.helper.ResponseHelper;

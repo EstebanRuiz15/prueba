@@ -17,7 +17,7 @@ subprojects {
 
     java {
         toolchain {
-            languageVersion = JavaLanguageVersion.of(21)
+            languageVersion = JavaLanguageVersion.of(25)
         }
     }
 
@@ -94,12 +94,26 @@ tasks.register('jacocoMergedReport', JacocoReport) {
     dependsOn = [test, subprojects.jacocoTestReport, pitestReportAggregate]
     additionalSourceDirs.setFrom files(subprojects.sourceSets.main.allSource.srcDirs)
     sourceDirectories.setFrom files(subprojects.sourceSets.main.allSource.srcDirs)
-    classDirectories.setFrom files(subprojects.sourceSets.main.output)
+    classDirectories.setFrom files(subprojects.sourceSets.main.output).asFileTree.matching {
+        exclude [
+            '**/MainApplication.class',
+            '**/config/**',
+            '**/mapper/**',
+            '**/*Mapper*.class',
+            '**/*MapperImpl*.class',
+            '**/entity/**',
+            '**/dto/**',
+            '**/enums/**',
+            '**/exception/**',
+            '**/model/**',
+        ]
+    }
     executionData.setFrom project.fileTree(dir: '.', include: '**/build/jacoco/test.exec')
     reports {
         xml.setRequired true
         csv.setRequired false
         html.setRequired true
+        html.setOutputLocation layout.buildDirectory.dir('reports/jacocoHtml')
     }
 }
 

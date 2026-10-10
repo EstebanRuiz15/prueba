@@ -1,9 +1,10 @@
 package co.com.nequi.ticketing.dynamodb.mapper;
 
 import co.com.nequi.ticketing.dynamodb.entity.OrderHistoryEntity;
-import co.com.nequi.ticketing.model.ActorType;
+import co.com.nequi.ticketing.model.enums.ActorType;
 import co.com.nequi.ticketing.model.OrderHistory;
-import co.com.nequi.ticketing.model.TicketStatus;
+import co.com.nequi.ticketing.model.TicketOrder;
+import co.com.nequi.ticketing.model.enums.TicketStatus;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -23,6 +24,20 @@ public interface OrderHistoryEntityMapper {
     @Mapping(target = "actor", expression = "java(parseActor(entity.getActor()))")
     @Mapping(target = "occurredAt", expression = "java(parseInstant(entity.getOccurredAt()))")
     OrderHistory toDomain(OrderHistoryEntity entity);
+
+    default OrderHistoryEntity toTransitionEntity(TicketOrder before, TicketOrder after, String reasonCode, String traceId, ActorType actor) {
+        return OrderHistoryEntity.builder()
+                .orderId(before.getId())
+                .sequence(after.getVersion())
+                .fromStatus(before.getStatus().name())
+                .toStatus(after.getStatus().name())
+                .reasonCode(reasonCode)
+                .actor(actor.name())
+                .quantity(before.getQuantity())
+                .traceId(traceId)
+                .occurredAt(after.getUpdatedAt().toString())
+                .build();
+    }
 
     default String mapStatus(TicketStatus status) {
         return status != null ? status.name() : null;

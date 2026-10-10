@@ -1,5 +1,7 @@
 package co.com.nequi.ticketing.api;
 
+import co.com.nequi.ticketing.api.handlers.EventHandler;
+import co.com.nequi.ticketing.api.handlers.OrderHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.server.RouterFunction;

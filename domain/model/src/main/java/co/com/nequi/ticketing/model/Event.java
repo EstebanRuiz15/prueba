@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import co.com.nequi.ticketing.model.enums.EventCategory;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 

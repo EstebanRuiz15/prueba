@@ -1,6 +1,6 @@
 package co.com.nequi.ticketing.sqs.sender.adapter;
 
-import co.com.nequi.ticketing.model.GeneralMessage;
+import co.com.nequi.ticketing.model.enums.GeneralMessage;
 import co.com.nequi.ticketing.model.exception.TechnicalException;
 import co.com.nequi.ticketing.model.gateways.QueueService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -13,6 +13,7 @@ import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class SQSSenderAdapter implements QueueService {
@@ -39,10 +40,9 @@ public class SQSSenderAdapter implements QueueService {
         payload.put("orderId", orderId);
         payload.put("traceId", traceId);
 
-        Map<String, MessageAttributeValue> attributes = new HashMap<>();
-        if (traceId != null) {
-            attributes.put("traceId", MessageAttributeValue.builder().dataType("String").stringValue(traceId).build());
-        }
+        Map<String, MessageAttributeValue> attributes = Optional.ofNullable(traceId)
+                .map(t -> Map.of("traceId", MessageAttributeValue.builder().dataType("String").stringValue(t).build()))
+                .orElse(Map.of());
 
         return Mono.fromCallable(() -> objectMapper.writeValueAsString(payload))
                 .flatMap(json -> Mono.fromFuture(() -> sqsAsyncClient.sendMessage(SendMessageRequest.builder()

@@ -2,7 +2,7 @@ package co.com.nequi.ticketing.usecase;
 
 import co.com.nequi.ticketing.model.Event;
 import co.com.nequi.ticketing.model.EventDetail;
-import co.com.nequi.ticketing.model.GeneralMessage;
+import co.com.nequi.ticketing.model.enums.GeneralMessage;
 import co.com.nequi.ticketing.model.exception.BusinessException;
 import co.com.nequi.ticketing.model.exception.TechnicalException;
 import co.com.nequi.ticketing.model.gateways.EventRepository;

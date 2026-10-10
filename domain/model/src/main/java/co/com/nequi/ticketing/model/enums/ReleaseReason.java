@@ -1,4 +1,4 @@
-package co.com.nequi.ticketing.model;
+package co.com.nequi.ticketing.model.enums;
 
 public enum ReleaseReason {
     EXPIRED,

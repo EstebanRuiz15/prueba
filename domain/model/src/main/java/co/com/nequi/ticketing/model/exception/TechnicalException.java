@@ -1,6 +1,6 @@
 package co.com.nequi.ticketing.model.exception;
 
-import co.com.nequi.ticketing.model.GeneralMessage;
+import co.com.nequi.ticketing.model.enums.GeneralMessage;
 import lombok.Getter;
 
 @Getter

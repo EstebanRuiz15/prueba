@@ -1,6 +1,7 @@
 apply plugin: 'org.springframework.boot'
 
 dependencies {
+	testImplementation 'tools.jackson.core:jackson-databind'
     implementation project(':reactive-web')
     implementation project(':dynamodb-adapter')
     implementation project(':sqs-sender')
@@ -11,9 +12,10 @@ dependencies {
     implementation "io.github.resilience4j:resilience4j-circuitbreaker:${resilience4jVersion}"
     implementation "io.github.resilience4j:resilience4j-retry:${resilience4jVersion}"
     implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
     runtimeOnly('org.springframework.boot:spring-boot-devtools')
     testImplementation 'com.tngtech.archunit:archunit:1.5.1'
-    testImplementation 'tools.jackson.core:jackson-databind'
 }
 
 tasks.register('explodedJar', Copy) {

@@ -62,7 +62,7 @@ class ArchitectureTest {
     static void exportIssues() {
         try {
             ObjectMapper mapper = new ObjectMapper();
-            List.of("C:\\Users\\User\\Desktop\\app_ticketing_Nequi/","C:\\Users\\User\\Desktop\\app_ticketing_Nequi\\infrastructure\\driven-adapters\\sqs-listener/","C:\\Users\\User\\Desktop\\app_ticketing_Nequi\\domain\\usecase/","C:\\Users\\User\\Desktop\\app_ticketing_Nequi\\applications\\app-service/","C:\\Users\\User\\Desktop\\app_ticketing_Nequi\\domain\\model/","C:\\Users\\User\\Desktop\\app_ticketing_Nequi\\infrastructure\\driven-adapters\\dynamodb-reactive/","C:\\Users\\User\\Desktop\\app_ticketing_Nequi\\infrastructure\\entry-points\\reactive-web/","C:\\Users\\User\\Desktop\\app_ticketing_Nequi\\infrastructure\\driven-adapters\\sqs-sender/").forEach(path -> {
+            List.of("/Users/esteban.ruiz.carmona/Documents/Api Lab/prueba/infrastructure/driven-adapters/sqs-listener/","/Users/esteban.ruiz.carmona/Documents/Api Lab/prueba/","/Users/esteban.ruiz.carmona/Documents/Api Lab/prueba/infrastructure/entry-points/reactive-web/","/Users/esteban.ruiz.carmona/Documents/Api Lab/prueba/infrastructure/driven-adapters/sqs-sender/","/Users/esteban.ruiz.carmona/Documents/Api Lab/prueba/applications/app-service/","/Users/esteban.ruiz.carmona/Documents/Api Lab/prueba/domain/model/","/Users/esteban.ruiz.carmona/Documents/Api Lab/prueba/infrastructure/driven-adapters/dynamodb-reactive/","/Users/esteban.ruiz.carmona/Documents/Api Lab/prueba/domain/usecase/").forEach(path -> {
                 try {
                     Files.write(Path.of(path, "build/issues.json"), mapper.writeValueAsBytes(issues.getOrDefault(path, new Utils.IssuesReport())));
                 } catch (IOException e) {

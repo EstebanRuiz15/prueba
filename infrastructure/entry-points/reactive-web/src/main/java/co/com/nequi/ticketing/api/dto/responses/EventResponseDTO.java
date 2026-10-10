@@ -1,4 +1,4 @@
-package co.com.nequi.ticketing.api.dto;
+package co.com.nequi.ticketing.api.dto.responses;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;

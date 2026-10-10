@@ -1,10 +1,10 @@
 package co.com.nequi.ticketing.api.mapper;
 
-import co.com.nequi.ticketing.api.dto.AvailabilityDTO;
-import co.com.nequi.ticketing.api.dto.EventRequestDTO;
-import co.com.nequi.ticketing.api.dto.EventResponseDTO;
+import co.com.nequi.ticketing.api.dto.responses.AvailabilityDTO;
+import co.com.nequi.ticketing.api.dto.request.EventRequestDTO;
+import co.com.nequi.ticketing.api.dto.responses.EventResponseDTO;
 import co.com.nequi.ticketing.model.Event;
-import co.com.nequi.ticketing.model.EventCategory;
+import co.com.nequi.ticketing.model.enums.EventCategory;
 import co.com.nequi.ticketing.model.EventDetail;
 import co.com.nequi.ticketing.model.Inventory;
 import org.mapstruct.Mapper;
@@ -24,7 +24,6 @@ public interface EventDTOMapper {
     EventResponseDTO toResponseDTO(Event event);
 
     default EventResponseDTO toDetailResponseDTO(EventDetail detail) {
-        if (detail == null) return null;
         Event event = detail.getEvent();
         Inventory inventory = detail.getInventory();
 

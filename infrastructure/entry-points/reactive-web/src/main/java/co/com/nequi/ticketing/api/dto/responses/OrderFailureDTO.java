@@ -1,4 +1,4 @@
-package co.com.nequi.ticketing.api.dto;
+package co.com.nequi.ticketing.api.dto.responses;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

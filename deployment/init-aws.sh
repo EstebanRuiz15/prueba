@@ -68,9 +68,24 @@ awslocal dynamodb create-table \
 
 # 6. SQS Queues and DLQs
 awslocal sqs create-queue --queue-name order-processing-dlq
-awslocal sqs create-queue --queue-name order-processing-queue
-
 awslocal sqs create-queue --queue-name order-expiration-dlq
-awslocal sqs create-queue --queue-name order-expiration-queue
+
+PROCESSING_DLQ_ARN=$(awslocal sqs get-queue-attributes \
+    --queue-url http://localhost:4566/000000000000/order-processing-dlq \
+    --attribute-names QueueArn \
+    --query 'Attributes.QueueArn' --output text)
+
+EXPIRATION_DLQ_ARN=$(awslocal sqs get-queue-attributes \
+    --queue-url http://localhost:4566/000000000000/order-expiration-dlq \
+    --attribute-names QueueArn \
+    --query 'Attributes.QueueArn' --output text)
+
+awslocal sqs create-queue \
+    --queue-name order-processing-queue \
+    --attributes "{\"RedrivePolicy\":\"{\\\"deadLetterTargetArn\\\":\\\"$PROCESSING_DLQ_ARN\\\",\\\"maxReceiveCount\\\":\\\"3\\\"}\",\"VisibilityTimeout\":\"30\"}"
+
+awslocal sqs create-queue \
+    --queue-name order-expiration-queue \
+    --attributes "{\"RedrivePolicy\":\"{\\\"deadLetterTargetArn\\\":\\\"$EXPIRATION_DLQ_ARN\\\",\\\"maxReceiveCount\\\":\\\"3\\\"}\",\"VisibilityTimeout\":\"30\"}"
 
 echo "=== LocalStack AWS Resources Initialization Completed ==="

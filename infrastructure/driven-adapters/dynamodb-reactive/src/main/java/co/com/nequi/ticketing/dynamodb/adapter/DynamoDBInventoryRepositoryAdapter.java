@@ -2,7 +2,7 @@ package co.com.nequi.ticketing.dynamodb.adapter;
 
 import co.com.nequi.ticketing.dynamodb.entity.InventoryEntity;
 import co.com.nequi.ticketing.dynamodb.mapper.InventoryEntityMapper;
-import co.com.nequi.ticketing.model.GeneralMessage;
+import co.com.nequi.ticketing.model.enums.GeneralMessage;
 import co.com.nequi.ticketing.model.Inventory;
 import co.com.nequi.ticketing.model.exception.TechnicalException;
 import co.com.nequi.ticketing.model.gateways.InventoryRepository;

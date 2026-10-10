@@ -1,12 +1,13 @@
 package co.com.nequi.ticketing.usecase;
 
-import co.com.nequi.ticketing.model.ActorType;
-import co.com.nequi.ticketing.model.GeneralMessage;
+import co.com.nequi.ticketing.usecase.utils.UseCaseConstants;
+import co.com.nequi.ticketing.model.enums.ActorType;
+import co.com.nequi.ticketing.model.enums.GeneralMessage;
 import co.com.nequi.ticketing.model.IdempotencyRecord;
 import co.com.nequi.ticketing.model.OrderHistory;
-import co.com.nequi.ticketing.model.OrderType;
+import co.com.nequi.ticketing.model.enums.OrderType;
 import co.com.nequi.ticketing.model.TicketOrder;
-import co.com.nequi.ticketing.model.TicketStatus;
+import co.com.nequi.ticketing.model.enums.TicketStatus;
 import co.com.nequi.ticketing.model.exception.BusinessException;
 import co.com.nequi.ticketing.model.gateways.EventRepository;
 import co.com.nequi.ticketing.model.gateways.IdempotencyRepository;
@@ -26,15 +27,12 @@ public class CreateComplimentaryUseCase {
     private final IdempotencyRepository idempotencyRepository;
 
     public Mono<TicketOrder> execute(String eventId, String adminUserId, int quantity, String recipient, String reason, String idempotencyKey, String requestHash, String traceId) {
-        String fullIdempotencyKey = adminUserId + "#POST_COMPLIMENTARY#" + idempotencyKey;
+        String fullIdempotencyKey = adminUserId + UseCaseConstants.IDEMPOTENCY_SCOPE_COMPLIMENTARY + idempotencyKey;
 
         return idempotencyRepository.findByKey(fullIdempotencyKey)
-                .flatMap(record -> {
-                    if (!record.getRequestHash().equals(requestHash)) {
-                        return Mono.error(new BusinessException(GeneralMessage.VAL_IDEMPOTENCY_MISMATCH));
-                    }
-                    return ticketOrderRepository.findById(record.getOrderId());
-                })
+                .flatMap(record -> record.getRequestHash().equals(requestHash)
+                        ? ticketOrderRepository.findById(record.getOrderId())
+                        : Mono.error(new BusinessException(GeneralMessage.VAL_IDEMPOTENCY_MISMATCH)))
                 .switchIfEmpty(Mono.defer(() -> createComplimentaryOrder(eventId, adminUserId, quantity, recipient, reason, fullIdempotencyKey, requestHash, traceId)));
     }
 
@@ -53,22 +51,22 @@ public class CreateComplimentaryUseCase {
                             .quantity(quantity)
                             .unitPrice(BigDecimal.ZERO)
                             .totalAmount(BigDecimal.ZERO)
-                            .currency(event.getCurrency() != null ? event.getCurrency() : "COP")
+                            .currency(event.getCurrency() != null ? event.getCurrency() : UseCaseConstants.DEFAULT_CURRENCY)
                             .status(TicketStatus.COMPLIMENTARY)
                             .recipient(recipient)
                             .complimentaryReason(reason)
                             .traceId(traceId)
-                            .version(1L)
+                            .version(UseCaseConstants.INITIAL_VERSION)
                             .createdAt(now)
                             .updatedAt(now)
                             .build();
 
                     OrderHistory history = OrderHistory.builder()
                             .orderId(orderId)
-                            .sequence(1L)
+                            .sequence(UseCaseConstants.INITIAL_SEQUENCE)
                             .fromStatus(null)
                             .toStatus(TicketStatus.COMPLIMENTARY)
-                            .reasonCode("COMPLIMENTARY_ISSUED")
+                            .reasonCode(UseCaseConstants.REASON_COMPLIMENTARY_ISSUED)
                             .actor(ActorType.ADMIN)
                             .quantity(quantity)
                             .traceId(traceId)
@@ -79,7 +77,7 @@ public class CreateComplimentaryUseCase {
                             .idempotencyKey(fullIdempotencyKey)
                             .requestHash(requestHash)
                             .orderId(orderId)
-                            .ttl(now.getEpochSecond() + 86400L)
+                            .ttl(now.getEpochSecond() + UseCaseConstants.IDEMPOTENCY_TTL_SECONDS)
                             .build();
 
                     return ticketOrderRepository.createComplimentaryTransaction(order, history, idempotencyRecord);

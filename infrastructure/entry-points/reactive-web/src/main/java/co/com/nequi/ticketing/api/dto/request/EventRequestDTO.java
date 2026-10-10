@@ -1,4 +1,4 @@
-package co.com.nequi.ticketing.api.dto;
+package co.com.nequi.ticketing.api.dto.request;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -20,7 +20,7 @@ public class EventRequestDTO {
     private String name;
 
     @NotBlank(message = "Event date is required")
-    private String date;
+    private String eventDate;
 
     private String category;
 
