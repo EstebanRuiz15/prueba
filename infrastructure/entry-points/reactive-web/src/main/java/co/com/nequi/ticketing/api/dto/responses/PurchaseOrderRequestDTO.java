@@ -17,9 +17,6 @@ public class PurchaseOrderRequestDTO {
     @NotBlank(message = "Event ID is required")
     private String eventId;
 
-    @NotBlank(message = "Customer ID is required")
-    private String customerId;
-
     @NotNull(message = "Quantity is required")
     @Min(value = 1, message = "Quantity must be at least 1")
     private Integer quantity;

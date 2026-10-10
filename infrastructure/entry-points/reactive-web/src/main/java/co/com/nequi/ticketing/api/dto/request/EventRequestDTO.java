@@ -22,6 +22,8 @@ public class EventRequestDTO {
     @NotBlank(message = "Event date is required")
     private String date;
 
+    private String category;
+
     @NotBlank(message = "Event venue is required")
     private String venue;
 
